@@ -156,7 +156,7 @@ impl<CM: ChannelMessenger> Tokener for TokenChecker<CM> {
 
 // Define a struct to hold the OAuth2 token
 #[derive(Serialize, Deserialize, Debug, Default)]
-struct Token {
+pub struct Token {
     refresh: String,
     refresh_expires_in: chrono::DateTime<chrono::Utc>,
     access: String,
@@ -166,7 +166,7 @@ struct Token {
 }
 
 impl Token {
-    fn load(path: PathBuf) -> std::io::Result<Token> {
+    pub fn load(path: PathBuf) -> std::io::Result<Token> {
         let mut file = File::open(path)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
@@ -189,11 +189,11 @@ impl Token {
         Ok(())
     }
 
-    fn is_refresh_valid(&self) -> bool {
+    pub fn is_refresh_valid(&self) -> bool {
         chrono::Utc::now() < self.refresh_expires_in
     }
 
-    fn is_access_valid(&self) -> bool {
+    pub fn is_access_valid(&self) -> bool {
         chrono::Utc::now() < self.access_expires_in
     }
 }
