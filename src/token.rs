@@ -158,9 +158,9 @@ impl<CM: ChannelMessenger> Tokener for TokenChecker<CM> {
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Token {
     refresh: String,
-    refresh_expires_in: chrono::DateTime<chrono::Utc>,
+    pub refresh_expires_in: chrono::DateTime<chrono::Utc>,
     access: String,
-    access_expires_in: chrono::DateTime<chrono::Utc>,
+    pub access_expires_in: chrono::DateTime<chrono::Utc>,
     #[serde(rename = "type")]
     type_: String,
 }
