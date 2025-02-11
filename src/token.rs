@@ -46,9 +46,13 @@ impl<CM: ChannelMessenger> TokenChecker<CM> {
         let authorizer =
             Authorizer::new(client_id, secret, redirect_url, async_client, messenger).await?;
 
+        println!("new_with_custom_auth");
         let token = match Token::load(path.clone()) {
             Ok(token) => token,
-            Err(_) => authorizer.save(path.clone()).await?,
+            Err(error) => {
+                println!("Error: {:?}", error);
+                authorizer.save(path.clone()).await?
+            }
         };
 
         let checker = Self {
@@ -63,23 +67,33 @@ impl<CM: ChannelMessenger> TokenChecker<CM> {
     }
 
     async fn check_or_update(&self) -> Result<(), Error> {
+        println!("Entering check or update");
         let mut token = self.token.lock().await;
         if token.is_access_valid() {
+            println!("Access token is valid, exiting check or update");
             return Ok(());
         }
 
         if token.is_refresh_valid() {
-            if let Ok(rsp) = self.authorizer.access_token(&token.refresh).await {
-                token.access.clone_from(rsp.access_token().secret());
-                token.access_expires_in = chrono::Utc::now()
-                    .checked_add_signed(ACCESS_TOKEN_LIFETIME)
-                    .expect("access_expires_in");
+            println!("Refresh token is valid, refreshing access token");
+            match self.authorizer.access_token(&token.refresh).await {
+                Ok(rsp) => {
+                    token.access.clone_from(rsp.access_token().secret());
+                    token.access_expires_in = chrono::Utc::now()
+                        .checked_add_signed(ACCESS_TOKEN_LIFETIME)
+                        .expect("access_expires_in");
 
-                token.save(self.path.clone())?;
+                    println!("check_or_update - save token");
+                    token.save(self.path.clone())?;
 
-                return Ok(());
+                    return Ok(());
+                }
+                Err(e) => {
+                    println!("check_or_update - access token failed: {:?}", e);
+                }
             }
         }
+        println!("check_or_update - save authorizer");
 
         *token = self.authorizer.save(self.path.clone()).await?;
         Ok(())
@@ -100,6 +114,7 @@ impl TokenChecker<LocalServerMessenger> {
         let authorizer =
             Authorizer::new(client_id, secret, redirect_url, async_client, messenger).await?;
 
+        println!("new_with_local_server");
         let token = match Token::load(path.clone()) {
             Ok(token) => token,
             Err(_) => authorizer.save(path.clone()).await?,
@@ -147,6 +162,7 @@ impl<CM: ChannelMessenger> Tokener for TokenChecker<CM> {
 
     /// must update token in Tokener
     async fn redo_authorization(&self) -> Result<(), Error> {
+        println!("redo_authorization");
         let mut token = self.token.lock().await;
         *token = self.authorizer.save(self.path.clone()).await?;
 

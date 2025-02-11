@@ -143,6 +143,7 @@ impl<CM: ChannelMessenger> Authorizer<CM> {
     }
 
     pub(super) async fn save(&self, path: PathBuf) -> Result<Token, Error> {
+        println!("Saving token to {:?}", path);
         let token = self
             .authorize()
             .await
