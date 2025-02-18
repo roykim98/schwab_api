@@ -67,29 +67,33 @@ impl<CM: ChannelMessenger> TokenChecker<CM> {
     }
 
     async fn check_or_update(&self) -> Result<(), Error> {
-        println!("Entering check or update");
         let mut token = self.token.lock().await;
         if token.is_access_valid() {
-            println!("Access token is valid, exiting check or update");
             return Ok(());
         }
 
         if token.is_refresh_valid() {
             println!("Refresh token is valid, refreshing access token");
-            match self.authorizer.access_token(&token.refresh).await {
-                Ok(rsp) => {
-                    token.access.clone_from(rsp.access_token().secret());
-                    token.access_expires_in = chrono::Utc::now()
-                        .checked_add_signed(ACCESS_TOKEN_LIFETIME)
-                        .expect("access_expires_in");
+            for i in 0..3 {
+                let result = self.authorizer.access_token(&token.refresh).await;
+                match result {
+                    Ok(rsp) => {
+                        token.access.clone_from(rsp.access_token().secret());
+                        token.access_expires_in = chrono::Utc::now()
+                            .checked_add_signed(ACCESS_TOKEN_LIFETIME)
+                            .expect("access_expires_in");
 
-                    println!("check_or_update - save token");
-                    token.save(self.path.clone())?;
+                        println!("check_or_update - save token");
+                        token.save(self.path.clone())?;
 
-                    return Ok(());
-                }
-                Err(e) => {
-                    println!("check_or_update - access token failed: {:?}", e);
+                        return Ok(());
+                    }
+                    Err(e) => {
+                        println!(
+                            "check_or_update - access token failed on attempt {:?}: {:?}",
+                            i, e
+                        );
+                    }
                 }
             }
         }
