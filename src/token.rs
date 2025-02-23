@@ -93,6 +93,8 @@ impl<CM: ChannelMessenger> TokenChecker<CM> {
                             "check_or_update - access token failed on attempt {:?}: {:?}",
                             i, e
                         );
+                        // sleep for 500 ms before retrying
+                        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                     }
                 }
             }
