@@ -10,6 +10,7 @@ use reqwest::Client;
 use crate::token::Tokener;
 use crate::{error::Error, model};
 use parameter::{Market, Projection, TransactionType};
+use tokio::time::{sleep, Duration};
 
 /// Interacting with the Schwab API.
 #[derive(Debug)]
@@ -26,8 +27,20 @@ impl<T: Tokener> Api<T> {
     pub async fn new(tokener: T, client: Client) -> Result<Self, Error> {
         let api = Api { tokener, client };
 
-        if (api.get_quote("AAPL".to_string()).await?.send().await).is_err() {
-            api.tokener.redo_authorization().await?;
+        let mut retries = 0;
+        let max_retries = 5;
+        let mut delay = Duration::from_millis(500);
+
+        while retries < max_retries {
+            if (api.get_quote("AAPL".to_string()).await?.send().await).is_err() {
+                println!("Validating the token seems to have failed. Retrying...");
+                api.tokener.redo_authorization().await?;
+                retries += 1;
+                sleep(delay).await;
+                delay *= 2; // Exponential backoff
+            } else {
+                break;
+            }
         }
 
         Ok(api)

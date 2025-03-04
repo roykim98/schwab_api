@@ -74,7 +74,7 @@ impl<CM: ChannelMessenger> TokenChecker<CM> {
 
         if token.is_refresh_valid() {
             println!("Refresh token is valid, refreshing access token");
-            for i in 0..3 {
+            for i in 0..5 {
                 let result = self.authorizer.access_token(&token.refresh).await;
                 match result {
                     Ok(rsp) => {
@@ -93,13 +93,14 @@ impl<CM: ChannelMessenger> TokenChecker<CM> {
                             "check_or_update - access token failed on attempt {:?}: {:?}",
                             i, e
                         );
-                        // sleep for 500 ms before retrying
-                        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                        // sleep with exponential backoff
+                        let delay = std::time::Duration::from_millis(100 * 2u64.pow(i));
+                        tokio::time::sleep(delay).await;
                     }
                 }
             }
         }
-        println!("check_or_update - save authorizer");
+        println!("check_or_update - save authorizer; refresh is valid but refreshing failed, redoing authorization");
 
         *token = self.authorizer.save(self.path.clone()).await?;
         Ok(())
