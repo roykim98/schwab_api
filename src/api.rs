@@ -34,13 +34,16 @@ impl<T: Tokener> Api<T> {
         while retries < max_retries {
             if (api.get_quote("AAPL".to_string()).await?.send().await).is_err() {
                 println!("Validating the token seems to have failed. Retrying...");
-                api.tokener.redo_authorization().await?;
                 retries += 1;
                 sleep(delay).await;
                 delay *= 2; // Exponential backoff
             } else {
                 break;
             }
+        }
+        if retries == max_retries {
+            println!("Retried {:?} times, reauthenticating...", max_retries);
+            api.tokener.redo_authorization().await?;
         }
 
         Ok(api)
