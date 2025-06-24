@@ -29,7 +29,7 @@ impl<T: Tokener> Api<T> {
 
         let mut retries = 0;
         let max_retries = 5;
-        let mut delay = Duration::from_millis(500);
+        let mut delay = Duration::from_millis(30000);
 
         while retries < max_retries {
             if (api.get_quote("AAPL".to_string()).await?.send().await).is_err() {
